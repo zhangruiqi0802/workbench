@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="订单跟踪">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%23ffffff'/%3E%3Ctext x='256' y='340' font-size='280' text-anchor='middle'%3E📦%3C/text%3E%3C/svg%3E">
+<title>订单跟踪</title>
+<style>
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-2: #f0f1f4;
+  --border: #e2e4e9;
+  --text: #1a1d24;
+  --dim: #6b7280;
+  --green: #16a34a;
+  --green-bg: #dcfce7;
+  --blue: #2563eb;
+  --blue-bg: #dbeafe;
+  --purple: #7c3aed;
+  --purple-bg: #ede9fe;
+  --yellow: #ca8a04;
+  --yellow-bg: #fef3c7;
+  --red: #dc2626;
+  --red-bg: #fee2e2;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-add {
+  padding: 8px 16px;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.btn-add:hover { opacity: 0.88; }
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* ===== 提醒条 ===== */
+.reminders { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.reminder {
+  background: var(--red-bg);
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #991b1b;
+}
+.reminder .icon { font-size: 20px; }
+.reminder .name { font-weight: 600; }
+.reminder .days { color: var(--red); font-weight: 700; }
+.reminder .close { margin-left: auto; cursor: pointer; opacity: 0.6; font-size: 16px; padding: 0 4px; }
+.reminder .close:hover { opacity: 1; }
+
+/* ===== 金额统计 ===== */
+.amount-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.amount-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.amount-card .label { font-size: 11px; color: var(--dim); margin-bottom: 3px; }
+.amount-card .value { font-size: 18px; font-weight: 700; }
+.amount-card.active .value { color: var(--blue); }
+.amount-card.done .value { color: var(--green); }
+.amount-card.commission .value { color: var(--yellow); }
+
+/* ===== 订单卡片 ===== */
+.orders { display: flex; flex-direction: column; gap: 12px; }
+.order {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  transition: border-color 0.15s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.order:hover { border-color: #c8ccd4; }
+.order.all-done { border-color: var(--green); background: #f0fdf4; }
+.order.overdue { border-color: #fca5a5; }
+
+.order-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.order-name { font-size: 16px; font-weight: 600; flex: 1; word-break: break-all; }
+.order-date { font-size: 12px; color: var(--dim); white-space: nowrap; }
+.order-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+.order:hover .order-actions { opacity: 1; }
+
+.icon-btn {
+  width: 26px; height: 26px; border: none;
+  background: var(--surface-2); color: var(--dim);
+  border-radius: 6px; cursor: pointer; font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.icon-btn:hover { background: var(--border); color: var(--text); }
+.icon-btn.del:hover { background: var(--red-bg); color: var(--red); }
+
+.order-price { font-size: 18px; font-weight: 700; color: var(--blue); margin-bottom: 10px; }
+.order.all-done .order-price { color: var(--green); }
+.order-note {
+  font-size: 13px; color: var(--dim); margin-bottom: 12px;
+  padding: 6px 10px; background: var(--surface-2);
+  border-radius: 6px; border-left: 3px solid var(--border);
+  white-space: pre-wrap; word-break: break-all;
+}
+
+/* ===== 状态勾选 ===== */
+.statuses { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.status {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 12px; background: var(--surface-2);
+  border-radius: 8px; cursor: pointer;
+  border: 1px solid transparent; transition: all 0.12s; user-select: none;
+}
+.status:hover { border-color: var(--border); }
+.status.done[data-type="designed"]  { background: var(--green-bg); }
+.status.done[data-type="reviewed"]  { background: var(--purple-bg); }
+.status.done[data-type="shipped"]   { background: var(--blue-bg); }
+.status.done[data-type="paid"]      { background: var(--yellow-bg); }
+
+.check {
+  width: 17px; height: 17px; border-radius: 5px;
+  border: 2px solid #cbd0d8;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 11px; font-weight: 700; transition: all 0.12s;
+}
+.status.done .check { border-color: transparent; color: #fff; }
+.status.done[data-type="designed"]  .check { background: var(--green); }
+.status.done[data-type="reviewed"]  .check { background: var(--purple); }
+.status.done[data-type="shipped"]   .check { background: var(--blue); }
+.status.done[data-type="paid"]      .check { background: var(--yellow); }
+
+.status-label { font-size: 13px; color: var(--dim); }
+.status.done .status-label { color: var(--text); font-weight: 500; }
+
+/* ===== 空状态 ===== */
+.empty { text-align: center; padding: 80px 20px; color: var(--dim); }
+.empty .emoji { font-size: 48px; margin-bottom: 14px; }
+.empty p { font-size: 15px; }
+
+/* ===== 模态框 ===== */
+.modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.3); z-index: 200;
+  align-items: center; justify-content: center; backdrop-filter: blur(4px);
+}
+.modal-bg.show { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 24px; width: 90%; max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+.modal h2 { font-size: 18px; margin-bottom: 18px; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 13px; color: var(--dim); margin-bottom: 5px; }
+.field input, .field textarea {
+  width: 100%; padding: 9px 12px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 14px;
+  outline: none; font-family: inherit; resize: vertical;
+}
+.field input:focus, .field textarea:focus { border-color: var(--blue); }
+.field textarea { min-height: 70px; }
+.modal-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; }
+.btn-cancel { background: var(--surface-2); color: var(--dim); }
+.btn-cancel:hover { background: var(--border); }
+.btn-save { background: var(--blue); color: #fff; }
+
+/* ===== 搜索框 ===== */
+.search-bar {
+  margin-bottom: 16px;
+  position: relative;
+}
+.search-bar input {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: border-color 0.15s;
+}
+.search-bar input:focus { border-color: var(--blue); }
+.search-bar .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px;
+  opacity: 0.5;
+}
+.search-bar .clear-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px; height: 22px;
+  border: none;
+  background: var(--surface-2);
+  color: var(--dim);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.search-bar .clear-btn.show { display: flex; }
+
+.search-count {
+  font-size: 12px;
+  color: var(--dim);
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+
+@media (max-width: 600px) {
+  .statuses { grid-template-columns: 1fr 1fr; }
+  main { padding: 16px; }
+  .order { padding: 14px; }
+  .amount-bar { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📦 订单跟踪</div>
+  <button class="btn-add" onclick="openAdd()">＋ 添加</button>
+</header>
+
+<main>
+  <div class="amount-bar" id="amountBar"></div>
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="搜索产品名称或备注..." oninput="onSearch(this.value)">
+    <button class="clear-btn" id="clearBtn" onclick="clearSearch()">✕</button>
+  </div>
+  <div class="search-count" id="searchCount" style="display:none;"></div>
+  <div class="reminders" id="reminders"></div>
+  <div class="orders" id="list"></div>
+  <div class="empty" id="empty" style="display:none;">
+    <div class="emoji">📋</div>
+    <p>还没有订单，点击右上角添加</p>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h2 id="mTitle">添加订单</h2>
+    <input type="hidden" id="mId">
+    <div class="field">
+      <label>产品名称</label>
+      <input type="text" id="mName" placeholder="例如：iPhone 15 Pro">
+    </div>
+    <div class="field">
+      <label>价格（元）</label>
+      <input type="number" id="mPrice" placeholder="0" min="0" step="0.01">
+    </div>
+    <div class="field">
+      <label>佣金（元）</label>
+      <input type="number" id="mCommission" placeholder="0" min="0" step="0.01">
+    </div>
+    <div class="field">
+      <label>备注</label>
+      <textarea id="mNote" placeholder="供应商、数量、价格等（可选）"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn btn-save" onclick="saveOrder()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = 'order_tracker_v3';
+const REMINDER_DAYS = 3;
+const TYPES = [
+  { key: 'designed',  label: '已出图' },
+  { key: 'reviewed',  label: '已评价' },
+  { key: 'shipped',   label: '已寄出' },
+  { key: 'paid',      label: '已结款' },
+];
+
+let data = JSON.parse(localStorage.getItem(KEY) || '[]');
+let dismissedReminders = JSON.parse(localStorage.getItem('dismissed_reminders') || '[]');
+let searchKeyword = '';
+
+function persist() {
+  localStorage.setItem(KEY, JSON.stringify(data));
+  localStorage.setItem('dismissed_reminders', JSON.stringify(dismissedReminders));
+}
+
+function escape(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function isAllDone(o) {
+  return o.status.designed && o.status.reviewed && o.status.shipped && o.status.paid;
+}
+
+// ========== 提醒 ==========
+function getOverdueOrders() {
+  const now = Date.now();
+  const ms = REMINDER_DAYS * 86400000;
+  return data.filter(o => {
+    if (!o.status.designed || o.status.reviewed) return false;
+    if (!o.designedAt) return false;
+    return (now - o.designedAt) >= ms;
+  });
+}
+
+function renderReminders() {
+  const c = document.getElementById('reminders');
+  const overdue = getOverdueOrders().filter(o => !dismissedReminders.includes(o.id));
+  if (overdue.length === 0) { c.innerHTML = ''; return; }
+  c.innerHTML = overdue.map(o => {
+    const days = Math.floor((Date.now() - o.designedAt) / 86400000);
+    return `<div class="reminder"><span class="icon">⏰</span><span><span class="name">${escape(o.name)}</span> 已出图 <span class="days">${days}</span> 天，尚未评价</span><span class="close" onclick="dismissReminder('${o.id}')">✕</span></div>`;
+  }).join('');
+}
+
+function dismissReminder(id) {
+  dismissedReminders.push(id);
+  persist();
+  renderReminders();
+}
+
+function addCalendarReminder(order) {
+  const d = new Date(order.designedAt + REMINDER_DAYS * 86400000);
+  const fmt = dt => dt.toISOString().replace(/[-:]/g,'').split('.')[0] + 'Z';
+  const ics = [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Order Tracker//CN',
+    'BEGIN:VEVENT',`UID:${order.id}@order-tracker`,
+    `DTSTAMP:${fmt(new Date())}`,`DTSTART:${fmt(d)}`,
+    `DTEND:${fmt(new Date(d.getTime()+3600000))}`,
+    `SUMMARY:提醒：${order.name} - 待评价`,
+    `DESCRIPTION:该订单已出图${REMINDER_DAYS}天，尚未完成评价。`,
+    'BEGIN:VALARM','TRIGGER:-PT0M','ACTION:DISPLAY',
+    `DESCRIPTION:提醒：${order.name} - 待评价`,
+    'END:VALARM','END:VEVENT','END:VCALENDAR'
+  ].join('\r\n');
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `提醒_${order.name}.ics`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ========== 订单渲染 ==========
+function renderAmount() {
+  let a=0,b=0,c=0;
+  data.forEach(o => {
+    const p = parseFloat(o.price)||0;
+    const cm = parseFloat(o.commission)||0;
+    if (isAllDone(o)) b+=p; else a+=p;
+    c+=cm;
+  });
+  document.getElementById('amountBar').innerHTML = `
+    <div class="amount-card active"><div class="label">进行中金额</div><div class="value">¥${a.toFixed(2)}</div></div>
+    <div class="amount-card done"><div class="label">已完成金额</div><div class="value">¥${b.toFixed(2)}</div></div>
+    <div class="amount-card commission"><div class="label">累计佣金</div><div class="value">¥${c.toFixed(2)}</div></div>
+  `;
+}
+
+// ========== 搜索 ==========
+function onSearch(val) {
+  searchKeyword = val.trim();
+  document.getElementById('clearBtn').classList.toggle('show', searchKeyword.length > 0);
+  render();
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  searchKeyword = '';
+  document.getElementById('clearBtn').classList.remove('show');
+  render();
+}
+
+function render() {
+  renderReminders();
+  renderAmount();
+  const list = document.getElementById('list');
+  const empty = document.getElementById('empty');
+  const searchCount = document.getElementById('searchCount');
+  
+  data.sort((a,b) => b.createdAt - a.createdAt);
+  
+  // 搜索过滤
+  let displayData = data;
+  if (searchKeyword) {
+    const kw = searchKeyword.toLowerCase();
+    displayData = data.filter(o => 
+      o.name.toLowerCase().includes(kw) || 
+      (o.note || '').toLowerCase().includes(kw)
+    );
+  }
+  
+  // 搜索结果计数
+  if (searchKeyword) {
+    searchCount.style.display = 'block';
+    searchCount.textContent = `找到 ${displayData.length} 个结果`;
+  } else {
+    searchCount.style.display = 'none';
+  }
+  
+  if (displayData.length === 0) {
+    list.innerHTML='';
+    empty.style.display='block';
+    if (searchKeyword) {
+      empty.querySelector('.emoji').textContent = '🔍';
+      empty.querySelector('p').textContent = '没有找到匹配的订单';
+    } else {
+      empty.querySelector('.emoji').textContent = '📋';
+      empty.querySelector('p').textContent = '还没有订单，点击右上角添加';
+    }
+    return;
+  }
+  empty.style.display = 'none';
+  const oIds = getOverdueOrders().map(o => o.id);
+  list.innerHTML = displayData.map(o => {
+    const allDone = isAllDone(o);
+    const isOver = oIds.includes(o.id);
+    const date = new Date(o.createdAt).toLocaleDateString('zh-CN');
+    const p = parseFloat(o.price)||0;
+    const cm = parseFloat(o.commission)||0;
+    const statuses = TYPES.map(t => `
+      <div class="status ${o.status[t.key]?'done':''}" data-type="${t.key}" onclick="toggle('${o.id}','${t.key}')">
+        <div class="check">${o.status[t.key]?'✓':''}</div>
+        <span class="status-label">${t.label}</span>
+      </div>`).join('');
+    return `
+      <div class="order ${allDone?'all-done':''} ${isOver?'overdue':''}">
+        <div class="order-top">
+          <div class="order-name">${escape(o.name)}</div>
+          <span class="order-date">${date}</span>
+          <div class="order-actions">
+            <button class="icon-btn" onclick="openEdit('${o.id}')">✏️</button>
+            <button class="icon-btn del" onclick="del('${o.id}')">🗑</button>
+          </div>
+        </div>
+        ${(p>0||cm>0)?`<div class="order-price">${p>0?`¥${p.toFixed(2)}`:''}${p>0&&cm>0?' · ':''}${cm>0?`<span style="color:var(--yellow)">佣金 ¥${cm.toFixed(2)}</span>`:''}</div>`:''}
+        ${o.note?`<div class="order-note">${escape(o.note)}</div>`:''}
+        <div class="statuses">${statuses}</div>
+      </div>`;
+  }).join('');
+}
+
+function toggle(id, key) {
+  const o = data.find(x => x.id === id);
+  if (!o) return;
+  o.status[key] = !o.status[key];
+  if (key === 'designed' && o.status.designed) {
+    o.designedAt = Date.now();
+    setTimeout(() => {
+      if (confirm(`已标记"已出图"。\n\n是否添加日历提醒？\n${REMINDER_DAYS}天后如果未评价将提醒你。`)) addCalendarReminder(o);
+    }, 100);
+  }
+  if (key === 'designed' && !o.status.designed) delete o.designedAt;
+  if (key === 'reviewed' && o.status.reviewed) dismissedReminders = dismissedReminders.filter(r => r !== id);
+  persist(); render();
+}
+
+function del(id) {
+  const o = data.find(x => x.id === id);
+  if (o && confirm(`删除「${o.name}」？`)) {
+    data = data.filter(x => x.id !== id);
+    dismissedReminders = dismissedReminders.filter(r => r !== id);
+    persist(); render();
+  }
+}
+
+function openAdd() {
+  document.getElementById('mTitle').textContent = '添加订单';
+  document.getElementById('mId').value = '';
+  document.getElementById('mName').value = '';
+  document.getElementById('mPrice').value = '';
+  document.getElementById('mCommission').value = '';
+  document.getElementById('mNote').value = '';
+  document.getElementById('modal').classList.add('show');
+  setTimeout(() => document.getElementById('mName').focus(), 80);
+}
+
+function openEdit(id) {
+  const o = data.find(x => x.id === id);
+  if (!o) return;
+  document.getElementById('mTitle').textContent = '编辑订单';
+  document.getElementById('mId').value = id;
+  document.getElementById('mName').value = o.name;
+  document.getElementById('mPrice').value = o.price || '';
+  document.getElementById('mCommission').value = o.commission || '';
+  document.getElementById('mNote').value = o.note || '';
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+function saveOrder() {
+  const id = document.getElementById('mId').value;
+  const name = document.getElementById('mName').value.trim();
+  const price = document.getElementById('mPrice').value;
+  const commission = document.getElementById('mCommission').value;
+  const note = document.getElementById('mNote').value.trim();
+  if (!name) { alert('请填写产品名称'); return; }
+  if (id) {
+    const o = data.find(x => x.id === id);
+    if (o) { o.name=name; o.price=price; o.commission=commission; o.note=note; }
+  } else {
+    data.push({
+      id: 'o_' + Date.now() + Math.random().toString(36).slice(2,6),
+      name, price, commission, note,
+      status: { designed:false, reviewed:false, shipped:false, paid:false },
+      createdAt: Date.now(),
+    });
+  }
+  persist(); closeModal(); render();
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+render();
+</script>
+</body>
+</html>
